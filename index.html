@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clarivah — Autoconhecimento</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box }
+        :root {
+            --void: #0B0B14; --deep: #12101F; --surface: #1A1730; --card: #201D38;
+            --border: #2E2A50; --accent: #C89BFF; --glow: #9B6BFF; --gold: #E8C87A;
+            --rose: #FF8FA3; --teal: #7FFFDA; --text: #FFFFFF; --muted: #A09EC0;
+        }
+        html, body { min-height: 100vh; background: var(--void); color: var(--text); font-family: 'Georgia', serif; overflow-x: hidden }
+        canvas#stars { position: fixed; inset: 0; pointer-events: none; z-index: 0 }
+        #app { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 0 12px 110px }
+        .screen { display: none }
+        .screen.active { display: block }
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 16px }
+        .card-glow { background: linear-gradient(135deg, var(--deep) 0%, #1E1840 100%); border: 1px solid var(--glow); border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: 0 0 30px rgba(155,107,255,.15) }
+        .card-gold { background: linear-gradient(135deg, var(--deep) 0%, #1E1840 100%); border: 1px solid var(--gold); border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: 0 0 40px rgba(232,200,122,.15) }
+        .sec-h { font-size: 10px; letter-spacing: 3px; color: var(--glow); text-transform: uppercase; margin-bottom: 16px }
+        .muted { color: var(--muted) }
+        .btn { padding: 12px 22px; border-radius: 40px; border: none; cursor: pointer; font-size: 13px; font-weight: 700; letter-spacing: 1px; font-family: 'Georgia', serif; transition: all .2s }
+        .btn-primary { background: linear-gradient(135deg, var(--glow), var(--accent)); color: var(--void); box-shadow: 0 4px 20px rgba(155,107,255,.4) }
+        .btn-gold { background: linear-gradient(135deg, #A07830, var(--gold)); color: var(--void) }
+        .btn-ghost { background: var(--surface); color: var(--muted) }
+        .btn:disabled { opacity: .4; cursor: not-allowed }
+        .btn-full { width: 100%; padding: 14px 0 }
+        .inp { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; color: var(--text); font-size: 15px; font-family: 'Georgia', serif; outline: none }
+        .inp:focus { border-color: var(--glow) }
+        .label { display: block; font-size: 11px; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 8px; text-transform: uppercase }
+        .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px }
+        .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px }
+        .grid-auto { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px }
+        @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes slideUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes glow { 0%,100%{text-shadow:0 0 20px var(--glow),0 0 40px rgba(155,107,255,.4)} 50%{text-shadow:0 0 40px var(--accent),0 0 80px rgba(155,107,255,.6)} }
+        @keyframes breathe { 0%,100%{box-shadow:0 0 30px rgba(155,107,255,.3)} 50%{box-shadow:0 0 60px rgba(155,107,255,.6)} }
+        @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+        @keyframes pileGlow { 0%,100%{box-shadow:0 0 20px rgba(232,200,122,.3)} 50%{box-shadow:0 0 40px rgba(232,200,122,.6)} }
+        @keyframes dots { 0%,80%,100%{opacity:.3} 40%{opacity:1} }
+        @keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-8px)} 40%,80%{transform:translateX(8px)} }
+        @keyframes cardFlip { 0%{transform:rotateY(90deg) scale(.9);opacity:0} 100%{transform:rotateY(0deg) scale(1);opacity:1} }
+        #bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; z-index: 100; background: rgba(18,16,31,.95); backdrop-filter: blur(20px); border-top: 1px solid var(--border); display: flex; overflow-x: auto; padding: 8px 4px 12px; scrollbar-width: none }
+        #bottom-nav::-webkit-scrollbar { display: none }
+        .nav-btn { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 8px; background: none; border: none; cursor: pointer; min-width: 52px; font-family: 'Georgia', serif }
+        .nav-btn .nav-emoji { font-size: 18px; transition: filter .2s }
+        .nav-btn .nav-label { font-size: 9px; letter-spacing: .5px; color: var(--muted); transition: color .2s }
+        .nav-btn .nav-dot { width: 20px; height: 2px; border-radius: 2px; background: var(--accent); display: none }
+        .nav-btn.active .nav-emoji { filter: drop-shadow(0 0 6px var(--accent)) }
+        .nav-btn.active .nav-label { color: var(--accent); font-weight: 700 }
+        .nav-btn.active .nav-dot { display: block }
+        #header { display: flex; align-items: center; justify-content: space-between; padding: 16px 0 20px; border-bottom: 1px solid var(--border); margin-bottom: 20px; flex-wrap: wrap; gap: 8px }
+        .logo { font-size: clamp(20px,5vw,26px); font-weight: 700; letter-spacing: 3px; color: var(--accent); text-shadow: 0 0 20px var(--glow) }
+        .num-chip { background: radial-gradient(circle,rgba(155,107,255,.13),transparent); border: 2px solid var(--glow); border-radius: 12px; padding: 14px; text-align: center; cursor: pointer; transition: all .2s }
+        .num-val { font-size: 32px; font-weight: 700; color: var(--accent); display: block }
+        .num-label { font-size: 10px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase }
+        .num-title { font-size: 11px; font-weight: 700; color: var(--accent); margin: 4px 0 2px }
+        .num-detail { display: none; margin-top: 12px; text-align: left }
+        .num-chip.open .num-detail { display: block }
+        .tarot-card-display { flex: 1; min-width: 90px; background: linear-gradient(160deg,#2A2050,#1A1040); border: 2px solid var(--gold); border-radius: 14px; padding: 12px 8px; text-align: center; animation: cardFlip .5s ease both }
+        #chat-messages { flex: 1; overflow-y: auto; padding-bottom: 8px; display: flex; flex-direction: column; gap: 14px }
+        .chat-msg { display: flex; gap: 10px; animation: slideUp .3s ease }
+        .chat-msg.user { flex-direction: row-reverse }
+        .chat-avatar { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 15px; align-self: flex-end }
+        .avatar-oracle { background: radial-gradient(circle,rgba(155,107,255,.5),var(--void)); border: 1px solid var(--glow) }
+        .avatar-user { background: linear-gradient(135deg,var(--glow),#7B4BCC) }
+        .bubble { max-width: 80%; border-radius: 18px; padding: 12px 16px; font-size: 14px; line-height: 1.7; color: #fff }
+        .bubble-oracle { background: var(--surface); border: 1px solid var(--border); border-radius: 18px 18px 18px 4px }
+        .bubble-user { background: linear-gradient(135deg,var(--glow),#7B4BCC); border-radius: 18px 18px 4px 18px; font-style: italic }
+        .bubble-reading { background: linear-gradient(135deg,var(--deep),#1E1840); border: 1px solid var(--glow); border-radius: 4px 18px 18px 18px; padding: 14px 16px }
+        .typing-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--glow); display: inline-block; animation: dots 1.4s infinite }
+        .pile-btn { flex: 1; background: linear-gradient(160deg,var(--card),var(--deep)); border: 2px solid var(--gold); border-radius: 16px; padding: 16px 12px; cursor: pointer; text-align: center; animation: pileGlow 2s ease-in-out infinite; transition: transform .15s; font-family: 'Georgia', serif }
+        .pile-btn:hover { transform: scale(1.03) }
+        .pile-stack-card { position: absolute; width: 54px; height: 72px; background: linear-gradient(135deg,#3D1A6E,#1A0A3E); border: 1px solid var(--glow); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 22px; box-shadow: 0 0 12px rgba(155,107,255,.3) }
+        .tag { font-size: 11px; color: var(--muted); background: var(--surface); padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border); display: inline-block }
+        @media(max-width:480px) { .grid3{grid-template-columns:1fr 1fr} .bubble{max-width:92%} }
+    </style>
+</head>
+
+<body>
+    <canvas id="stars"></canvas>
+
+    <!-- ONBOARDING -->
+    <div id="screen-onboard" class="screen active" style="position:relative;z-index:1">
+        <div style="max-width:480px;margin:0 auto;padding:60px 16px 40px;text-align:center;animation:fadeIn .8s ease">
+            <div style="font-size:clamp(36px,8vw,52px);font-weight:700;letter-spacing:4px;color:var(--accent);text-shadow:0 0 40px var(--glow);margin-bottom:8px">Clarivah</div>
+            <div style="font-size:13px;color:var(--muted);letter-spacing:2px;margin-bottom:40px">Autoconhecimento · Numerologia · Tarô</div>
+            <div class="card-glow" style="text-align:left">
+                <p style="color:var(--muted);font-size:13px;text-align:center;margin-bottom:20px;line-height:1.7">Para revelar seu mapa numerológico cabalístico, precisamos de algumas informações.</p>
+                <div style="background:linear-gradient(135deg,rgba(232,200,122,.12),rgba(155,107,255,.08));border:1px solid var(--gold);border-radius:12px;padding:14px 16px;margin-bottom:20px">
+                    <div style="display:flex;gap:10px;align-items:flex-start">
+                        <span style="font-size:20px;flex-shrink:0">⚠️</span>
+                        <div>
+                            <p style="color:var(--gold);font-weight:700;font-size:12px;letter-spacing:1px;margin-bottom:6px">ATENÇÃO — USE SEU NOME DE REGISTRO CIVIL</p>
+                            <p style="color:#fff;font-size:13px;line-height:1.7">Digite seu <strong>nome completo exatamente como está na certidão de nascimento</strong> — incluindo acentos, cedilhas e letras especiais. Se casou, mudou ou adotou outro nome, <strong>não importa</strong>: use sempre o nome original do registro.</p>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-bottom:16px">
+                    <label class="label">Nome completo de nascimento</label>
+                    <input class="inp" id="inp-name" placeholder="Ex: Maria Aparecida Gonçalves">
+                </div>
+                <div style="margin-bottom:24px">
+                    <label class="label">Data de nascimento</label>
+                    <input class="inp" id="inp-dob" type="date">
+                </div>
+                <button class="btn btn-primary btn-full" id="btn-onboard">Revelar meu mapa ✨</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP -->
+    <div id="screen-app" class="screen">
+        <div id="app">
+            <div id="header">
+                <div class="logo">✦ Clarivah</div>
+                <div style="text-align:right">
+                    <div id="header-name" style="color:var(--accent);font-size:13px;font-weight:700"></div>
+                    <div id="header-date" style="color:var(--muted);font-size:11px"></div>
+                </div>
+            </div>
+            <div id="page-title" class="sec-h" style="margin-bottom:12px"></div>
+
+            <!-- MAP PAGE -->
+            <div id="page-num" class="page" style="display:none">
+                <div id="num-map-section">
+                    <p class="sec-h">Mapa Numerológico Cabalístico</p>
+                    <p style="color:var(--muted);font-size:12px;line-height:1.7;margin-bottom:16px">Toque em cada número para ver o significado completo, energias e desafios.</p>
+                    <div class="grid-auto" id="num-chips"></div>
+                    <div class="card" style="margin-top:4px" id="num-pillars"></div>
+                    <div id="num-karma"></div>
+                    <p class="sec-h" style="margin-top:24px">Ano Pessoal</p>
+                    <div id="num-year-card"></div>
+                    <p class="sec-h" style="margin-top:24px">Energia de Hoje</p>
+                    <div class="card-glow" id="num-today"></div>
+                </div>
+            </div>
+
+            <!-- TAROT PAGE -->
+            <div id="page-tarot" class="page" style="display:none">
+                <p class="sec-h">Escolha sua leitura</p>
+                <div id="tarot-menu"></div>
+                <div id="tarot-crystal" style="display:none;text-align:center;padding:60px 20px">
+                    <div style="font-size:100px;margin-bottom:20px;filter:drop-shadow(0 0 30px var(--glow));animation:pulse 1s infinite">🔮</div>
+                    <p style="color:var(--muted);font-size:15px;margin-bottom:24px;letter-spacing:1px">Pense na sua pergunta e concentre sua intenção...</p>
+                    <div id="tarot-countdown" style="font-size:64px;font-weight:700;color:var(--accent);text-shadow:0 0 30px var(--glow)"></div>
+                </div>
+                <div id="tarot-result" style="display:none"></div>
+            </div>
+
+            <!-- CHAT PAGE -->
+            <div id="page-chat" class="page" style="display:none;flex-direction:column;height:calc(100vh - 160px);min-height:400px">
+                <div id="chat-messages"></div>
+                <div id="chat-piles" style="display:none"></div>
+                <div id="chat-typing" style="display:none;align-items:center;gap:10px">
+                    <div class="chat-avatar avatar-oracle">🔮</div>
+                    <div class="bubble bubble-oracle" style="display:inline-flex;gap:6px;align-items:center;padding:12px 18px">
+                        <div class="typing-dot" style="animation-delay:0s"></div>
+                        <div class="typing-dot" style="animation-delay:.2s"></div>
+                        <div class="typing-dot" style="animation-delay:.4s"></div>
+                    </div>
+                </div>
+                <div id="chat-input-area" style="border-top:1px solid var(--border);padding-top:12px;display:flex;gap:10px;align-items:flex-end;background:var(--void);flex-shrink:0">
+                    <textarea id="chat-input" placeholder="Escreva sua pergunta ao tarô..." rows="2"
+                        style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 14px;color:#fff;font-size:14px;font-family:'Georgia',serif;resize:none;outline:none;line-height:1.5"></textarea>
+                    <button id="btn-chat-send" class="btn btn-primary" style="padding:12px 16px;border-radius:14px;font-size:18px;flex-shrink:0">🔮</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BOTTOM NAV -->
+    <nav id="bottom-nav" style="display:none">
+        <button class="nav-btn active" data-page="num"><span class="nav-emoji">✦</span><span class="nav-label">Mapa</span><div class="nav-dot"></div></button>
+        <button class="nav-btn" data-page="tarot"><span class="nav-emoji">🃏</span><span class="nav-label">Tarô</span><div class="nav-dot"></div></button>
+        <button class="nav-btn" data-page="chat"><span class="nav-emoji">💬</span><span class="nav-label">Leituras</span><div class="nav-dot"></div></button>
+    </nav>
+
+    <script>
+        // ═══════════════════════════════════════════════════════
+        // STARFIELD
+        // ═══════════════════════════════════════════════════════
+        (function () {
+            const c = document.getElementById('stars'), ctx = c.getContext('2d');
+            function resize() { c.width = window.innerWidth; c.height = window.innerHeight; }
+            resize(); window.addEventListener('resize', resize);
+            const stars = Array.from({ length: 200 }, () => ({ x: Math.random() * c.width, y: Math.random() * c.height, r: Math.random() * 1.4, a: Math.random() }));
+            function draw() { ctx.clearRect(0, 0, c.width, c.height); stars.forEach(s => { s.a += .003 * (Math.random() > .5 ? 1 : -1); ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fillStyle = `rgba(200,155,255,${Math.max(.05, Math.min(.8, s.a))})`; ctx.fill(); }); requestAnimationFrame(draw); }
+            draw();
+        })();
+
+        // ═══════════════════════════════════════════════════════
+        // CONSTANTS
+        // ═══════════════════════════════════════════════════════
+        const TAROT_DECK = [
+            { name: "O Louco", polarity: "neutral", emoji: "🃏" }, { name: "O Mago", polarity: "yes", emoji: "🎩" },
+            { name: "A Sacerdotisa", polarity: "neutral", emoji: "🌙" }, { name: "A Imperatriz", polarity: "yes", emoji: "👑" },
+            { name: "O Imperador", polarity: "yes", emoji: "⚔️" }, { name: "O Hierofante", polarity: "neutral", emoji: "📿" },
+            { name: "Os Enamorados", polarity: "yes", emoji: "💞" }, { name: "O Carro", polarity: "yes", emoji: "🏆" },
+            { name: "A Força", polarity: "yes", emoji: "🦁" }, { name: "O Eremita", polarity: "neutral", emoji: "🕯️" },
+            { name: "A Roda da Fortuna", polarity: "neutral", emoji: "☯️" }, { name: "A Justiça", polarity: "neutral", emoji: "⚖️" },
+            { name: "O Enforcado", polarity: "neutral", emoji: "🔄" }, { name: "A Morte", polarity: "neutral", emoji: "🌑" },
+            { name: "Temperança", polarity: "neutral", emoji: "🌊" }, { name: "O Diabo", polarity: "no", emoji: "🔗" },
+            { name: "A Torre", polarity: "no", emoji: "⚡" }, { name: "A Estrela", polarity: "yes", emoji: "⭐" },
+            { name: "A Lua", polarity: "neutral", emoji: "🌕" }, { name: "O Sol", polarity: "yes", emoji: "☀️" },
+            { name: "O Julgamento", polarity: "yes", emoji: "🎺" }, { name: "O Mundo", polarity: "yes", emoji: "🌍" },
+            { name: "Ás de Copas", polarity: "yes", emoji: "🏆" }, { name: "Dois de Copas", polarity: "yes", emoji: "💑" },
+            { name: "Três de Copas", polarity: "yes", emoji: "🥂" }, { name: "Cinco de Copas", polarity: "no", emoji: "😢" },
+            { name: "Seis de Paus", polarity: "yes", emoji: "🌟" }, { name: "Dez de Espadas", polarity: "no", emoji: "🗡️" },
+            { name: "Rainha de Copas", polarity: "yes", emoji: "👸" }, { name: "Rei de Paus", polarity: "yes", emoji: "🔥" },
+            { name: "Cavaleiro de Espadas", polarity: "no", emoji: "💨" }, { name: "Três de Espadas", polarity: "no", emoji: "💔" },
+        ];
+        function drawCards(n) { return [...TAROT_DECK].sort(() => Math.random() - .5).slice(0, n); }
+
+        const NUM_MEANINGS = {
+            1: { title: "Liderança", desc: "O número 1 carrega a energia do início absoluto. É o arquétipo do pioneiro, do líder nato e do criador. Representa a força de vontade individual, a coragem de agir primeiro e a capacidade de abrir caminhos onde antes não existia nenhum.", positive: ["Iniciativa e coragem para agir", "Liderança natural e carisma", "Independência e autoconfiança", "Criatividade e originalidade", "Determinação e força de vontade"], negative: ["Arrogância e egocentrismo", "Dificuldade em trabalhar em equipe", "Impulsividade e impaciência", "Teimosia e rigidez", "Solidão por excesso de independência"] },
+            2: { title: "Cooperação", desc: "O número 2 é a energia da dualidade, da parceria e do equilíbrio entre opostos. É o diplomata, o mediador, aquele que sente as emoções alheias como se fossem suas.", positive: ["Diplomacia e habilidade de mediação", "Sensibilidade e empatia profunda", "Intuição aguçada", "Lealdade e cooperação", "Paciência e gentileza"], negative: ["Indecisão e insegurança", "Dependência emocional", "Passividade em excesso", "Hipersensibilidade e mágoas fáceis", "Dificuldade em impor limites"] },
+            3: { title: "Criatividade", desc: "O número 3 pulsa com alegria, expressão e comunicação. É o artista, o comunicador, o otimista que ilumina qualquer ambiente com sua presença.", positive: ["Criatividade e expressão artística", "Comunicação carismática e eloquência", "Alegria, otimismo e entusiasmo", "Sociabilidade e encanto pessoal", "Imaginação rica e original"], negative: ["Dispersão e falta de foco", "Superficialidade e frivolidade", "Exagero e dramatismo", "Dificuldade em completar projetos", "Uso da palavra para ferir"] },
+            4: { title: "Estabilidade", desc: "O número 4 é a pedra fundamental sobre a qual tudo é construído. É o trabalhador dedicado, o organizador meticuloso e o guardião da tradição.", positive: ["Disciplina e organização impecável", "Confiabilidade e lealdade", "Capacidade de construção duradoura", "Praticidade e senso de realidade", "Dedicação e perseverança"], negative: ["Rigidez e resistência a mudanças", "Teimosia e inflexibilidade", "Excesso de trabalho e privação do prazer", "Pensamento limitado e conservadorismo", "Dificuldade em lidar com o inesperado"] },
+            5: { title: "Liberdade", desc: "O número 5 é a energia pura da liberdade, da aventura e da transformação constante. É o viajante, o comunicador versátil, aquele que não suporta gaiolas de nenhuma espécie.", positive: ["Adaptabilidade e versatilidade", "Espírito aventureiro e curioso", "Magnetismo e carisma natural", "Capacidade de mudança e renovação", "Inteligência rápida e perspicaz"], negative: ["Instabilidade e inconstância", "Dificuldade de compromisso", "Impulsividade e excesso de riscos", "Tendência ao vício e ao excesso sensorial", "Irresponsabilidade e superficialidade"] },
+            6: { title: "Harmonia", desc: "O número 6 é o guardião do lar, o curador dos corações e o criador de beleza. É o número do amor incondicional, da responsabilidade e do serviço.", positive: ["Amor profundo e cuidado genuíno", "Senso estético refinado e amor pela beleza", "Responsabilidade e comprometimento", "Capacidade de cura e consolo", "Harmonia nos relacionamentos"], negative: ["Controle e possessividade", "Autossacrifício excessivo", "Interferência na vida alheia", "Dificuldade em receber ajuda", "Perfeccionismo paralisante"] },
+            7: { title: "Espiritualidade", desc: "O número 7 é o místico, o filósofo e o buscador da verdade oculta. É o mais espiritual de todos os números, representando a introspecção profunda e a sabedoria interior.", positive: ["Inteligência analítica e profunda", "Intuição espiritual elevada", "Busca pela verdade e sabedoria", "Introspecção e autoconhecimento", "Capacidade de pesquisa e investigação"], negative: ["Isolamento e reclusão excessiva", "Ceticismo e frieza emocional", "Dificuldade de confiar nos outros", "Perfeccionismo e autocrítica severa", "Tendência à melancolia e ao pessimismo"] },
+            8: { title: "Poder", desc: "O número 8 é o executivo cósmico, o gerenciador de recursos e o manifestador da abundância. Representa o karma da prosperidade.", positive: ["Poder de realização e ambição saudável", "Habilidade para negócios e finanças", "Liderança forte e autoridade natural", "Capacidade de recuperação após quedas", "Generosidade quando em equilíbrio"], negative: ["Materialismo e ganância", "Autoritarismo e abuso de poder", "Workaholic e negligência afetiva", "Arrogância e prepotência", "Conflito constante com dinheiro quando desequilibrado"] },
+            9: { title: "Humanismo", desc: "O número 9 é o mais elevado dos números simples — o completador, o humanista e o alma antiga. Carrega a missão de servir ao bem maior.", positive: ["Compaixão e amor universal", "Sabedoria e maturidade espiritual", "Generosidade e altruísmo", "Talento artístico e criativo profundo", "Capacidade de inspirar e elevar os outros"], negative: ["Dificuldade de desapego e encerramento de ciclos", "Martírio e vitimização", "Ilusão e idealismo excessivo", "Frieza emocional como mecanismo de defesa", "Dificuldade de receber em troca do que dá"] },
+            11: { title: "Mestre Iluminado", desc: "O 11 é o primeiro dos Números Mestres — um canal de luz entre o plano espiritual e o material. Carrega sensibilidade e intuição extraordinárias.", positive: ["Intuição e percepção extrassensorial", "Capacidade de inspirar e iluminar multidões", "Visão espiritual elevada", "Criatividade e sensibilidade artísticas fora do comum", "Canal de mensagens do plano superior"], negative: ["Ansiedade e nervosismo crônicos", "Hipersensibilidade paralisante", "Oscilação entre grandiosidade e profunda insegurança", "Dificuldade de aterrar no cotidiano", "Burnout espiritual e emocional"] },
+            22: { title: "Mestre Construtor", desc: "O 22 é o Número Mestre mais poderoso — o Grande Arquiteto. Possui a visão do 11 combinada com a capacidade construtiva do 4.", positive: ["Visão estratégica de longo prazo", "Capacidade de materializar o impossível", "Liderança inspiradora e transformadora", "Disciplina e poder construtivo excepcionais", "Potencial de impacto global"], negative: ["Pressão interna insuportável pelas próprias expectativas", "Tendência ao colapso quando não realiza o potencial", "Rigidez e dificuldade de delegar", "Workaholic compulsivo", "Isolamento pela grandeza da missão"] },
+            33: { title: "Mestre Curador", desc: "O 33 é o Número Mestre do amor incondicional. É extremamente raro e traz a missão de curar, ensinar e elevar a humanidade.", positive: ["Amor incondicional e compaixão ilimitada", "Dom de cura física, emocional e espiritual", "Capacidade de ensinar e transformar vidas", "Sabedoria espiritual profundíssima", "Presença que irradia paz e calma"], negative: ["Autossacrifício até a autodestruição", "Dificuldade em estabelecer limites saudáveis", "Excesso de responsabilidade pelos outros", "Desilusão quando o amor não é correspondido", "Esgotamento total pelo cuidado dos outros"] },
+        };
+
+        // ═══════════════════════════════════════════════════════
+        // NUMEROLOGY ENGINE
+        // ═══════════════════════════════════════════════════════
+        function reduceNum(n) { while (n > 9 && n !== 11 && n !== 22 && n !== 33) { n = String(n).split('').reduce((a, d) => a + parseInt(d), 0); } return n; }
+        function letterValue(c) { const v = { a:1,b:2,c:3,d:4,e:5,f:6,g:7,h:8,i:9,j:1,k:2,l:3,m:4,n:5,o:6,p:7,q:8,r:9,s:1,t:2,u:3,v:4,w:5,x:6,y:7,z:8 }; return v[c.toLowerCase()] || 0; }
+        const VOWELS = 'aeiouáéíóúàèìòùâêîôûãõ';
+        function isVowel(c) { return VOWELS.includes(c.toLowerCase()); }
+        function calcNumerology(name, dob) {
+            const [y, m, d] = dob.split('-').map(Number);
+            const digits = `${d}${m}${y}`.split('').map(Number);
+            const destiny = reduceNum(digits.reduce((a, x) => a + x, 0));
+            const letters = name.replace(/[^a-záéíóúàèìòùâêîôûãõ]/gi, '').split('');
+            const soul = reduceNum(letters.filter(isVowel).map(letterValue).reduce((a, x) => a + x, 0));
+            const persona = reduceNum(letters.filter(c => !isVowel(c)).map(letterValue).reduce((a, x) => a + x, 0));
+            const expression = reduceNum(letters.map(letterValue).reduce((a, x) => a + x, 0));
+            const mission = reduceNum(destiny + expression);
+            const today = new Date();
+            const personalYear = reduceNum(d + m + today.getFullYear());
+            const allNums = new Set([destiny, soul, persona, expression, mission]);
+            const karmaDebts = [13, 14, 16, 19].filter(k => digits.includes(k % 10));
+            const karmaLessons = [1,2,3,4,5,6,7,8,9].filter(n => !allNums.has(n));
+            return { destiny, soul, persona, expression, mission, personalYear, karmaDebts, karmaLessons };
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // API CLIENT
+        // ═══════════════════════════════════════════════════════
+        async function askClaude(system, user, maxTokens = 1000, retries = 2) {
+            if (!user || typeof user !== 'string' || !user.trim()) return 'Não foi possível obter a leitura.';
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 55_000);
+            try {
+                const r = await fetch('/api/anthropic', {
+                    method: 'POST', signal: controller.signal,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ system, user: user.trim(), max_tokens: maxTokens }),
+                });
+                clearTimeout(timeoutId);
+                if (!r.ok) {
+                    let errMsg = `Erro ${r.status} no servidor.`;
+                    try { const d = await r.json(); if (d?.error) errMsg = d.error; } catch {}
+                    if (retries > 0 && [429,502,503,504,529].includes(r.status)) {
+                        await new Promise(res => setTimeout(res, r.status === 429 ? 8000 : 3000));
+                        return askClaude(system, user, maxTokens, retries - 1);
+                    }
+                    return `⚠️ ${errMsg}`;
+                }
+                const data = await r.json();
+                const text = data.text || '';
+                if (!text) return 'O oráculo não retornou uma resposta. Tente novamente.';
+                return text;
+            } catch (err) {
+                clearTimeout(timeoutId);
+                if (err.name === 'AbortError') return '⚠️ O oráculo demorou demais. Verifique sua conexão e tente novamente.';
+                if (retries > 0) { await new Promise(res => setTimeout(res, 2000)); return askClaude(system, user, maxTokens, retries - 1); }
+                return '⚠️ Não foi possível conectar ao oráculo. Verifique sua conexão.';
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // APP STATE
+        // ═══════════════════════════════════════════════════════
+        let STATE = { user: null, nums: null, tarotType: null, chatPending: null };
+
+        // ═══════════════════════════════════════════════════════
+        // NAVIGATION
+        // ═══════════════════════════════════════════════════════
+        function showPage(id) {
+            document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+            const p = document.getElementById('page-' + id);
+            if (p) p.style.display = id === 'chat' ? 'flex' : 'block';
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.page === id));
+            const titles = { num: 'Meu Mapa', tarot: 'Leituras de Tarô', chat: 'Leituras Online' };
+            document.getElementById('page-title').textContent = titles[id] || '';
+            if (id === 'num') renderNumPage();
+            if (id === 'chat') scrollChatBottom();
+        }
+        document.querySelectorAll('.nav-btn').forEach(b => b.addEventListener('click', () => showPage(b.dataset.page)));
+
+        // ═══════════════════════════════════════════════════════
+        // ONBOARDING
+        // ═══════════════════════════════════════════════════════
+        document.getElementById('btn-onboard').addEventListener('click', () => {
+            const name = document.getElementById('inp-name').value.trim();
+            const dob = document.getElementById('inp-dob').value;
+            if (name.length < 3 || !dob) return;
+            STATE.nums = calcNumerology(name, dob);
+            STATE.user = { name, dob };
+            document.getElementById('screen-onboard').classList.remove('active');
+            document.getElementById('screen-app').classList.add('active');
+            document.getElementById('bottom-nav').style.display = 'flex';
+            const first = name.split(' ')[0];
+            document.getElementById('header-name').textContent = first;
+            document.getElementById('header-date').textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' });
+            renderTarotMenu();
+            initChat();
+            showPage('num');
+        });
+
+        // ═══════════════════════════════════════════════════════
+        // NUMEROLOGY PAGE
+        // ═══════════════════════════════════════════════════════
+        function renderNumPage() {
+            const n = STATE.nums; if (!n) return;
+
+            // Num chips — apenas Destino, Expressão, Personalidade, Missão
+            const chips = [
+                { v: n.destiny, l: 'Destino' },
+                { v: n.expression, l: 'Expressão' },
+                { v: n.persona, l: 'Personalidade' },
+                { v: n.mission, l: 'Missão' }
+            ];
+            document.getElementById('num-chips').innerHTML = chips.map(({ v, l }) => {
+                const m = NUM_MEANINGS[v] || { title: `Número ${v}`, desc: '', positive: [], negative: [] };
+                return `<div class="num-chip" onclick="this.classList.toggle('open')">
+                    <span class="num-val">${v}</span><span class="num-label">${l}</span>
+                    <p class="num-title">${m.title}</p>
+                    <p style="font-size:10px;color:var(--muted)">▼ ver mais</p>
+                    <div class="num-detail">
+                        <p style="color:#fff;font-size:12px;line-height:1.7;margin-bottom:10px">${m.desc}</p>
+                        <p style="color:var(--teal);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">✨ Positivo</p>
+                        ${m.positive.map(e => `<div style="display:flex;gap:8px;margin-bottom:3px"><span style="color:var(--teal);flex-shrink:0">▲</span><span style="color:#fff;font-size:11px;line-height:1.5">${e}</span></div>`).join('')}
+                        <p style="color:var(--rose);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;margin:8px 0 6px">🌑 Desafios</p>
+                        ${m.negative.map(e => `<div style="display:flex;gap:8px;margin-bottom:3px"><span style="color:var(--rose);flex-shrink:0">▼</span><span style="color:#fff;font-size:11px;line-height:1.5">${e}</span></div>`).join('')}
+                    </div>
+                </div>`;
+            }).join('');
+
+            // Pillars
+            const pillars = [
+                { label: 'Destino', n: n.destiny, def: 'Calculado pela data de nascimento. Revela sua missão de vida.' },
+                { label: 'Expressão', n: n.expression, def: 'Calculado por todas as letras. Como você se manifesta no mundo.' },
+                { label: 'Personalidade', n: n.persona, def: 'Calculado pelas consoantes. Como os outros te percebem na primeira impressão.' },
+                { label: 'Missão', n: n.mission, def: 'Síntese entre Destino e Expressão. O propósito maior da sua presença nesta vida.' }
+            ];
+            document.getElementById('num-pillars').innerHTML = `<p class="sec-h" style="margin-bottom:14px">O que cada pilar representa</p>` +
+                pillars.map(({ label, n: v, def }) => `<div style="display:flex;gap:12px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border)">
+                    <div style="width:38px;height:38px;flex-shrink:0;border-radius:10px;background:rgba(155,107,255,.13);border:1px solid var(--glow);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--accent);font-size:16px">${v}</div>
+                    <div><div style="color:var(--accent);font-weight:700;font-size:12px;margin-bottom:3px">${label} · ${NUM_MEANINGS[v]?.title}</div><div style="color:var(--muted);font-size:11px;line-height:1.6">${def}</div></div>
+                </div>`).join('');
+
+            // Karma
+            let karmaHtml = '';
+            if (n.karmaDebts.length) {
+                const km = { 13: { title: 'Karma 13 — Transformação pelo Trabalho', desc: 'Representa preguiça ou dispersão em vidas passadas. O trabalho honesto e constante é o caminho da libertação.' }, 14: { title: 'Karma 14 — Equilíbrio da Liberdade', desc: 'Abuso da liberdade em encarnações anteriores. Esta vida pede uso sábio da liberdade.' }, 16: { title: 'Karma 16 — A Queda do Ego', desc: 'Ego inflado e abuso de poder em vidas passadas. Situações virão para derrubar estruturas construídas sobre areia.' }, 19: { title: 'Karma 19 — Humildade', desc: 'Abuso de autoridade e egoísmo. Aprender que o verdadeiro poder está no serviço ao próximo.' } };
+                karmaHtml += `<div class="card" style="border-color:var(--rose);margin-bottom:16px"><p class="sec-h" style="color:var(--rose);margin-bottom:12px">🔴 Dívidas Cármicas · ${n.karmaDebts.join(', ')}</p>${n.karmaDebts.map(d => { const k = km[d] || { title: `Karma ${d}`, desc: '' }; return `<div style="margin-bottom:10px"><div style="color:var(--rose);font-weight:700;font-size:12px;margin-bottom:4px">${k.title}</div><div style="color:#fff;font-size:12px;line-height:1.7">${k.desc}</div></div>`; }).join('')}</div>`;
+            }
+            if (n.karmaLessons.length) {
+                karmaHtml += `<div class="card" style="border-color:var(--gold);margin-bottom:16px"><p class="sec-h" style="color:var(--gold);margin-bottom:10px">⭐ Lições Cármicas · ausentes: ${n.karmaLessons.join(', ')}</p><p style="color:var(--muted);font-size:12px;line-height:1.7;margin-bottom:12px">Energias pouco desenvolvidas em vidas anteriores — convites ao crescimento nesta encarnação.</p><div style="display:flex;flex-wrap:wrap;gap:8px">${n.karmaLessons.map(v => `<div style="background:rgba(232,200,122,.1);border:1px solid rgba(232,200,122,.4);border-radius:8px;padding:6px 12px"><span style="color:var(--gold);font-weight:700;font-size:14px">${v}</span><span style="color:var(--muted);font-size:10px;margin-left:6px">${NUM_MEANINGS[v]?.title}</span></div>`).join('')}</div></div>`;
+            }
+            document.getElementById('num-karma').innerHTML = karmaHtml;
+
+            // Ano Pessoal
+            const ayM = NUM_MEANINGS[n.personalYear] || { title: `Número ${n.personalYear}`, desc: '' };
+            document.getElementById('num-year-card').innerHTML = `<div class="card-glow" style="margin-bottom:0">
+                <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px">
+                    <div style="width:56px;height:56px;flex-shrink:0;border-radius:14px;background:rgba(155,107,255,.2);border:2px solid var(--glow);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--accent);font-size:26px">${n.personalYear}</div>
+                    <div><div style="color:var(--accent);font-weight:700;font-size:15px">${ayM.title}</div><div style="color:var(--muted);font-size:11px;margin-top:3px">Ano Pessoal ${new Date().getFullYear()}</div></div>
+                </div>
+                <p style="color:#fff;font-size:13px;line-height:1.7">${ayM.desc}</p>
+            </div>`;
+
+            // Energia de Hoje
+            const personalDay = reduceNum(n.personalYear + new Date().getDate());
+            const favors = { 1:['Iniciativas','Novas decisões'],2:['Relacionamentos','Negociações'],3:['Criatividade','Comunicação'],4:['Organização','Trabalho'],5:['Mudanças','Novidades'],6:['Família','Amor'],7:['Meditação','Estudos espirituais'],8:['Negócios','Finanças'],9:['Arte','Encerramento de ciclos'] };
+            const avoids = { 1:['Dependência','Passividade'],2:['Conflitos','Impulsividade'],3:['Isolamento','Pessimismo'],4:['Mudanças bruscas','Impulsividade'],5:['Compromissos rígidos','Rotina forçada'],6:['Egoísmo','Controle'],7:['Superficialidade','Excesso social'],8:['Ganância','Autoritarismo'],9:['Apego','Novos projetos'] };
+            const de = NUM_MEANINGS[personalDay] || {};
+            document.getElementById('num-today').innerHTML = `
+                <p class="sec-h">Dia ${personalDay} — ${de.title || ''} · ${new Date().toLocaleDateString('pt-BR')}</p>
+                <p style="color:var(--muted);font-size:13px;margin-bottom:16px;line-height:1.6">${de.desc || ''}</p>
+                <div class="grid2">
+                    <div><p class="sec-h" style="color:var(--teal)">✅ Favorece</p>${(favors[personalDay] || ['Autoconhecimento']).map(f => `<div style="font-size:12px;color:#fff;padding:4px 0;border-bottom:1px solid var(--border)">${f}</div>`).join('')}</div>
+                    <div><p class="sec-h" style="color:var(--rose)">⚠️ Evitar</p>${(avoids[personalDay] || ['Excesso de crítica']).map(a => `<div style="font-size:12px;color:#fff;padding:4px 0;border-bottom:1px solid var(--border)">${a}</div>`).join('')}</div>
+                </div>`;
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // TAROT
+        // ═══════════════════════════════════════════════════════
+        const READINGS = [
+            { id: 'yesno', label: 'Sim ou Não', emoji: '🎯', desc: 'Uma resposta direta para sua dúvida' },
+            { id: 'love', label: 'Amor', emoji: '💞', desc: 'A energia da sua relação e perspectivas' },
+            { id: 'situation', label: 'Situação Específica', emoji: '🌀', desc: 'Análise profunda de um contexto' },
+            { id: 'advice', label: 'Conselho do Dia', emoji: '🌟', desc: 'Orientação para as próximas horas' },
+            { id: 'ppp', label: 'Passado · Presente · Futuro', emoji: '⏳', desc: 'O fio do tempo na sua história' },
+        ];
+        function renderTarotMenu() {
+            document.getElementById('tarot-menu').innerHTML = READINGS.map(r => `
+                <div class="card" style="cursor:pointer;display:flex;align-items:center;gap:14px;margin-bottom:10px;transition:border-color .2s"
+                    onmouseenter="this.style.borderColor='var(--glow)'" onmouseleave="this.style.borderColor='var(--border)'"
+                    onclick="startTarotReading('${r.id}')">
+                    <span style="font-size:28px">${r.emoji}</span>
+                    <div style="flex:1"><div style="font-weight:700;color:#fff;font-size:14px;margin-bottom:2px">${r.label}</div><div style="font-size:11px;color:var(--muted)">${r.desc}</div></div>
+                    <span style="color:var(--muted)">›</span>
+                </div>`).join('');
+        }
+        function startTarotReading(type) {
+            STATE.tarotType = type;
+            document.getElementById('tarot-menu').style.display = 'none';
+            document.getElementById('tarot-crystal').style.display = 'block';
+            let n = 5;
+            const el = document.getElementById('tarot-countdown');
+            el.textContent = n;
+            const t = setInterval(() => { n--; if (n > 0) { el.textContent = n; } else { clearInterval(t); el.textContent = '✨'; setTimeout(() => doTarotReading(type), 400); } }, 900);
+        }
+        async function doTarotReading(type) {
+            document.getElementById('tarot-crystal').style.display = 'none';
+            document.getElementById('tarot-result').style.display = 'block';
+            document.getElementById('tarot-result').innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted)"><div style="font-size:48px;margin-bottom:16px">🔮</div><p>Interpretando as cartas...</p></div>`;
+            let cards, sys, prompt;
+            const n = STATE.nums, u = STATE.user, first = u.name.split(' ')[0];
+            const INST = `Você é Clarivah, intérprete de tarô. Responda em português brasileiro. Use síntese direta em tópicos rápidos e curtos, sem quebras excessivas de texto. Seja direto, objetivo e claro.`;
+            if (type === 'yesno') { cards = drawCards(1); sys = INST; prompt = `Carta: ${cards[0].name} (${cards[0].polarity === 'yes' ? 'SIM' : cards[0].polarity === 'no' ? 'NÃO' : 'NEUTRA'}). Dia numerológico ${n?.personalYear}. Dê resposta direta e interprete para ${first}.`; }
+            else if (type === 'love') { cards = drawCards(3); sys = INST; prompt = `Leitura amorosa para ${first}. Pessoa: ${cards[0].name}. Relação: ${cards[1].name}. Futuro: ${cards[2].name}. Interprete de forma integrada.`; }
+            else if (type === 'advice') { cards = drawCards(1); sys = INST; prompt = `Conselho do dia para ${first}. Carta: ${cards[0].name}. Ano pessoal ${n?.personalYear}.`; }
+            else if (type === 'ppp') { cards = drawCards(3); sys = INST; prompt = `Leitura temporal para ${first}. Passado: ${cards[0].name}. Presente: ${cards[1].name}. Futuro: ${cards[2].name}. Narre a jornada.`; }
+            else { cards = drawCards(2); sys = INST; prompt = `Situação de ${first}. Em jogo: ${cards[0].name}. Conselho: ${cards[1].name}. Analise.`; }
+            try {
+                const text = await askClaude(sys, prompt);
+                const label = READINGS.find(r => r.id === type)?.label || '';
+                const polColor = p => p === 'yes' ? 'var(--teal)' : p === 'no' ? 'var(--rose)' : 'var(--muted)';
+                const polLabel = p => p === 'yes' ? '▲ Favorável' : p === 'no' ? '▼ Desfavorável' : '● Neutro';
+                document.getElementById('tarot-result').innerHTML = `
+                    <p class="sec-h">${label}</p>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">${cards.map((c, i) => `<div class="tarot-card-display" style="animation-delay:${i * .15}s"><span style="font-size:clamp(28px,6vw,40px);display:block;margin-bottom:6px">${c.emoji}</span><div style="font-size:12px;font-weight:700;color:var(--accent)">${c.name}</div><div style="font-size:10px;color:${polColor(c.polarity)};margin-top:3px">${polLabel(c.polarity)}</div></div>`).join('')}</div>
+                    <div class="card-glow"><p class="sec-h">Interpretação · Clarivah</p>${text.split('\n').filter(Boolean).map(p => `<p style="color:#fff;font-size:clamp(13px,3.5vw,15px);line-height:1.85;margin-bottom:12px">${p}</p>`).join('')}</div>
+                    <button class="btn btn-ghost" style="margin-top:8px" onclick="resetTarot()">← Nova leitura</button>`;
+            } catch (err) {
+                document.getElementById('tarot-result').innerHTML = `<div style="text-align:center;padding:40px"><div style="font-size:48px;margin-bottom:16px">⚠️</div><p style="color:var(--rose);font-size:14px;margin-bottom:20px">O oráculo encontrou um obstáculo. Tente novamente.</p><button class="btn btn-ghost" onclick="resetTarot()">← Voltar</button></div>`;
+            }
+        }
+        function resetTarot() {
+            document.getElementById('tarot-result').style.display = 'none';
+            document.getElementById('tarot-result').innerHTML = '';
+            document.getElementById('tarot-menu').style.display = 'block';
+            STATE.tarotType = null;
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // TAROT CHAT (LEITURAS ONLINE)
+        // ═══════════════════════════════════════════════════════
+        function initChat() {
+            const first = STATE.user.name.split(' ')[0];
+            addChatMessage('oracle', 'welcome', `Olá, ${first}. Sou o oráculo de Leituras Online. Faça sua pergunta — escreva o que está no seu coração e revelarei dois montinhos de cartas para você escolher.`);
+        }
+        function addChatMessage(role, type, text, extra = {}) {
+            const msgs = document.getElementById('chat-messages');
+            const div = document.createElement('div');
+            div.className = `chat-msg ${role}`;
+            const avatarHtml = role === 'oracle' ? `<div class="chat-avatar avatar-oracle">🔮</div>` : `<div class="chat-avatar avatar-user">✦</div>`;
+            let bubbleHtml = '';
+            if (type === 'welcome' || type === 'choice') {
+                bubbleHtml = `<div class="bubble ${role === 'user' ? 'bubble-user' : 'bubble-oracle'}">${text}</div>`;
+            } else if (type === 'question') {
+                bubbleHtml = `<div class="bubble bubble-user">"${text}"</div>`;
+            } else if (type === 'reading') {
+                const { cards, otherCards, chosenTitle, otherTitle } = extra;
+                const polColor = p => p === 'yes' ? 'var(--teal)' : p === 'no' ? 'var(--rose)' : 'var(--muted)';
+                const cardHtml = cards.map((c, i) => `<div style="flex:1;min-width:80px;background:linear-gradient(160deg,#2A2050,#1A1040);border:2px solid var(--gold);border-radius:12px;padding:10px 8px;text-align:center;animation:cardFlip .5s ease ${i * .15}s both"><span style="font-size:clamp(20px,5vw,28px);display:block;margin-bottom:4px">${c.emoji}</span><div style="font-size:10px;font-weight:700;color:var(--gold);line-height:1.3">${c.name}</div><div style="font-size:9px;color:${polColor(c.polarity)};margin-top:2px">${c.polarity === 'yes' ? '▲' : c.polarity === 'no' ? '▼' : '●'}</div></div>`).join('');
+                const otherHtml = otherCards.map(c => `<span>${c.emoji} ${c.name}</span>`).join(' · ');
+                const parasHtml = text.split('\n').filter(Boolean).map(p => `<p style="color:#fff;font-size:clamp(13px,3.5vw,14px);line-height:1.8;margin-bottom:10px">${p}</p>`).join('');
+                bubbleHtml = `<div style="display:flex;flex-direction:column;gap:10px;max-width:80%">
+                    <div style="display:flex;gap:6px">${cardHtml}</div>
+                    <div class="bubble-reading">${parasHtml}
+                        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:10px;color:var(--muted)">Montinho não escolhido (${otherTitle}): ${otherHtml}</div>
+                    </div></div>`;
+            }
+            if (role === 'oracle') div.innerHTML = avatarHtml + bubbleHtml;
+            else div.innerHTML = bubbleHtml + avatarHtml;
+            msgs.appendChild(div);
+            scrollChatBottom();
+        }
+        function scrollChatBottom() { setTimeout(() => { const m = document.getElementById('chat-messages'); if (m) m.scrollTop = m.scrollHeight; }, 50); }
+        function setChatDisabled(v) {
+            document.getElementById('chat-input').disabled = v;
+            document.getElementById('btn-chat-send').disabled = v;
+        }
+        async function sendChatQuestion() {
+            const inp = document.getElementById('chat-input');
+            const q = inp.value.trim();
+            if (!q || STATE.chatPending) return;
+            inp.value = '';
+            addChatMessage('user', 'question', q);
+            setChatDisabled(true);
+            document.getElementById('chat-typing').style.display = 'flex';
+            const pile1 = drawCards(3), pile2 = drawCards(3);
+            const sys = `Você é Clarivah. Dada uma pergunta e dois grupos de cartas, crie títulos energéticos curtos. Responda APENAS em JSON sem markdown. Formato: {"title1":"...","title2":"..."}`;
+            const prompt = `Pergunta: "${q}"\nMontinho 1: ${pile1.map(c => c.name).join(', ')}\nMontinho 2: ${pile2.map(c => c.name).join(', ')}`;
+            let title1 = 'Caminho A', title2 = 'Caminho B';
+            try {
+                const raw = await askClaude(sys, prompt);
+                const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
+                title1 = parsed.title1 || title1;
+                title2 = parsed.title2 || title2;
+            } catch (e) {}
+            document.getElementById('chat-typing').style.display = 'none';
+            STATE.chatPending = { question: q, pile1, pile2, title1, title2 };
+            renderChatPiles();
+            setChatDisabled(true);
+        }
+        function renderChatPiles() {
+            const p = STATE.chatPending; if (!p) return;
+            const piles = document.getElementById('chat-piles');
+            piles.style.display = 'block';
+            piles.innerHTML = `
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+                    <div class="chat-avatar avatar-oracle">🔮</div>
+                    <div class="bubble bubble-oracle">As cartas foram embaralhadas. Dois montinhos aguardam você. <strong style="color:var(--gold)">Confie na sua intuição e escolha um.</strong></div>
+                </div>
+                <div style="display:flex;gap:12px;padding-left:42px">
+                    ${[1, 2].map(n => {
+                        const title = n === 1 ? p.title1 : p.title2;
+                        return `<button class="pile-btn" onclick="chooseChatPile(${n})" style="flex:1">
+                            <div style="position:relative;width:60px;height:72px;margin:0 auto 12px">
+                                ${[2,1,0].map(offset => `<div class="pile-stack-card" style="top:${offset*4}px;left:${offset*3}px">${offset===0?'🌟':'✦'}</div>`).join('')}
+                            </div>
+                            <div style="color:var(--gold);font-size:11px;font-weight:700;letter-spacing:1px;margin-bottom:4px">MONTINHO ${n}</div>
+                            <div style="color:#fff;font-size:12px;line-height:1.4">${title}</div>
+                            <div style="color:var(--muted);font-size:10px;margin-top:6px">3 cartas · toque para revelar</div>
+                        </button>`;
+                    }).join('')}
+                </div>`;
+            scrollChatBottom();
+        }
+        async function chooseChatPile(n) {
+            const p = STATE.chatPending; if (!p) return;
+            const chosen = n === 1 ? p.pile1 : p.pile2;
+            const other = n === 1 ? p.pile2 : p.pile1;
+            const chosenTitle = n === 1 ? p.title1 : p.title2;
+            const otherTitle = n === 1 ? p.title2 : p.title1;
+            document.getElementById('chat-piles').style.display = 'none';
+            STATE.chatPending = null;
+            addChatMessage('user', 'choice', `Escolhi o Montinho ${n} — ${chosenTitle}`);
+            document.getElementById('chat-typing').style.display = 'flex';
+            const first = STATE.user.name.split(' ')[0];
+            const sys = `Você é Clarivah, oráculo de tarô. Faça leituras íntimas e diretas. Fale pelo nome da pessoa. Português brasileiro. Use síntese direta em tópicos rápidos e curtos, sem quebras excessivas de texto.`;
+            const prompt = `Consulente: ${first}\nPergunta: "${p.question}"\nO consulente escolheu o Montinho ${n} (${chosenTitle}).\nCartas escolhidas: ${chosen.map(c => c.name).join(', ')}\nCartas não escolhidas (${otherTitle}): ${other.map(c => c.name).join(', ')}\nInterprete as 3 cartas respondendo diretamente à pergunta. Mencione brevemente o caminho não escolhido no final.`;
+            try {
+                const text = await askClaude(sys, prompt);
+                document.getElementById('chat-typing').style.display = 'none';
+                addChatMessage('oracle', 'reading', text, { cards: chosen, otherCards: other, chosenTitle, otherTitle });
+            } catch (err) {
+                document.getElementById('chat-typing').style.display = 'none';
+                addChatMessage('oracle', 'welcome', '⚠️ O oráculo encontrou um obstáculo. Por favor, envie sua pergunta novamente.');
+            }
+            setChatDisabled(false);
+            scrollChatBottom();
+        }
+        document.getElementById('btn-chat-send').addEventListener('click', sendChatQuestion);
+        document.getElementById('chat-input').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatQuestion(); } });
+    </script>
+</body>
+</html>
